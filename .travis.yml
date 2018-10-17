@@ -1,0 +1,20 @@
+language: python
+python:
+  - "3.6"
+# command to install dependencies
+install:
+  - pip install -r requirements.txt
+  - pip install nose
+  - pip install coverage
+  - pip install python-coveralls
+# command to run tests
+script:
+  - nosetests tests.test_dbsrv --verbose --with-coverage
+  - nosetests tests.test_hcsrv --verbose --with-coverage
+after_success:
+  - coveralls
+notifications:
+  email:
+    on_success: change
+    on_failure: always
+  slack: genomes-ebi:ZVN9oaY6GQ7HDSBtmQC5f5PL
