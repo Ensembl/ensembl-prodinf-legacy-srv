@@ -9,17 +9,19 @@ from ensembl_prodinf import reporting
 from ensembl_prodinf import HiveInstance
 from ensembl_prodinf.event_tasks import process_result
 import event_config
+import app_logging
 
 pool = reporting.get_pool(event_config.report_server)
-     
-def get_logger():    
-    return reporting.get_logger(pool, event_config.report_exchange, 'event_handler', None, {})
+
+logger = reporting.get_logger(pool, event_config.report_exchange, 'event_handler', None, {})
 
 app = Flask(__name__, instance_relative_config=True)
 print app.config
 app.config.from_object('event_config')
 app.config.from_pyfile('event_config.py')
 swagger = Swagger(app)
+app.logger.addHandler(app_logging.file_handler(__name__))
+app.logger.addHandler(app_logging.default_handler())
 
 class EventNotFoundError(Exception):
     """Exception showing event not found"""        
@@ -98,19 +100,19 @@ def submit_job():
         # convert event to processes
         processes = get_processes_for_event(event)
         for process in processes:
-            get_logger().debug("Submitting process " + str(process))
+            logger.debug("Submitting process " + str(process))
             hive = get_hive(process)
             analysis = get_analysis(process)
             job = hive.create_job(analysis, {'event':event})
             event_task = process_result.delay(event, process, job.job_id)
             results['processes'].append({
                 "process":process,
-                "job":job.job_id,
+                "job_id":job.job_id,
                 "task":event_task.id
             })
         return jsonify(results);
     else:
-        raise Exception("Could not handle input of type " + request.headers['Content-Type'])
+        raise ValueError("Could not handle input of type " + request.headers['Content-Type'])
 
 
 @app.route('/jobs/<string:process>/<int:job_id>', methods=['GET'])
@@ -169,16 +171,16 @@ def job(process, job_id):
     output_format = request.args.get('format')
     if output_format == 'email':
         email = request.args.get('email')
-        if email == None:
-            raise Exception("Email not specified")
+        if email is None:
+            raise ValueError("Email not specified")
         return results_email(request.args.get('email'), process, job_id)
     elif output_format == None:
         return results(process, job_id)
     else:
-        raise Exception("Format "+output_format+" not known")
+        raise ValueError("Format "+output_format+" not known")
         
 def results(process, job_id):    
-    get_logger().info("Retrieving job from " + process + " with ID " + str(job_id))
+    logger.info("Retrieving job from " + process + " with ID " + str(job_id))
     return jsonify(get_hive(process).get_result_for_job_id(job_id))
 
 
@@ -245,7 +247,7 @@ def delete_job(process, job_id):
     return jsonify({"id":job_id, "process": process})
 
 def results_email(email, process, job_id):
-    get_logger().info("Retrieving job with ID " + str(job_id) + " for " + str(email))
+    logger.info("Retrieving job with ID " + str(job_id) + " for " + str(email))
     hive = get_hive(process)
     job = hive.get_job_by_id(job_id)
     results = hive.get_result_for_job_id(job_id)
@@ -287,7 +289,7 @@ def jobs(process):
         schema:
           $ref: '#/definitions/job_id'
     """ 
-    get_logger().info("Retrieving jobs")
+    logger.info("Retrieving jobs")
     return jsonify(get_hive(process).get_all_results(get_analysis(process)))
 
 
@@ -348,3 +350,6 @@ def handle_error(e):
         code = 400
     logger.exception(str(e))
     return jsonify(error=str(e)), code
+
+if __name__ == "__main__":
+    app.run(debug=True)
