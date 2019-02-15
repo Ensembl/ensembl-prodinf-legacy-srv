@@ -7,8 +7,7 @@ from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-
-import app_logging
+from ensembl_prodinf.utils import app_logging
 from ensembl_prodinf import HiveInstance
 from ensembl_prodinf.email_tasks import email_when_complete
 
@@ -23,8 +22,7 @@ app.config.from_object('hc_config')
 app.config.from_pyfile('hc_config.py', silent=True)
 app.analysis = app.config["HIVE_ANALYSIS"]
 
-app.logger.addHandler(app_logging.file_handler(__name__))
-app.logger.addHandler(app_logging.default_handler())
+app_logging.add_app_handler(app.logger, __name__)
 
 logger.info(app.config)
 swagger = Swagger(app)

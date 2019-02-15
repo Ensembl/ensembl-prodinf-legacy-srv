@@ -7,7 +7,7 @@ from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-import app_logging
+from ensembl_prodinf.utils import app_logging
 from ensembl_prodinf.resource_lock import ResourceLocker, LockException
 
 app = Flask(__name__, instance_relative_config=True)
@@ -93,8 +93,7 @@ app.config['SWAGGER'] = {
 
 app.config.from_object('lock_config')
 app.config.from_pyfile('lock_config.py', silent=True)
-app.logger.addHandler(app_logging.file_handler(__name__))
-app.logger.addHandler(app_logging.default_handler())
+app_logging.add_app_handler(app.logger, __name__)
 
 if app.config.get("LOCK_URI") is None:
     raise ValueError("LOCK_URI not set in configuration")

@@ -10,7 +10,7 @@ from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-import app_logging
+from ensembl_prodinf.utils import app_logging
 from ensembl_prodinf import HiveInstance
 from ensembl_prodinf.db_utils import list_databases, get_database_sizes
 from ensembl_prodinf.email_tasks import email_when_complete
@@ -26,11 +26,10 @@ app.config['SWAGGER'] = {
     'title': 'Database copy REST endpoints',
     'uiversion': 2
 }
-print app.config
+
 swagger = Swagger(app)
 app.servers = None
-app.logger.addHandler(app_logging.file_handler(__name__))
-app.logger.addHandler(app_logging.default_handler())
+app_logging.add_app_handler(app.logger, __name__)
 
 
 def get_servers():
@@ -712,7 +711,7 @@ def kill_job(job_id):
     os.kill(int(process_id.process_id), signal.SIGTERM)
     time.sleep(5)
     # Check if the process that we killed is alive.
-    if (is_running(int(process_id.process_id))):
+    if is_running(int(process_id.process_id)):
         logger.error("Wasn't able to kill the process: " + str(process_id.process_id))
         raise ValueError("Wasn't able to kill the process: " + str(process_id.process_id))
     else:

@@ -26,6 +26,7 @@ class DbSrvTest(unittest.TestCase):
                 "mysql://rwuser:pwd@locohost:3306/"
             ]
         }
+        db_app.app.conf['smtp_server'] = '127.0.0.1'
 
     def test_list_servers_single(self):
         response = self.app.get("/servers/rouser?query=loca");

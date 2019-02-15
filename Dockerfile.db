@@ -1,7 +1,8 @@
 FROM python:2.7
 WORKDIR /app
-COPY requirements.txt gunicorn.conf db_app.py db_config.py /app/
-COPY email_celery_app_config.py.example /app/email_celery_app_config.py
+ADD db_copy/* /app/
+ADD requirements.txt gunicorn.conf db_app.py db_config.py app_logging.py /app/
+# ADD email_celery_app_config.py.example /app/email_celery_app_config.py
 COPY ssh_config /home/appuser/.ssh/config
 RUN useradd -u 1000 -g 0 appuser && \
     pip install -r requirements.txt && \

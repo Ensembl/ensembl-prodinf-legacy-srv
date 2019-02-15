@@ -8,7 +8,7 @@ from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-import app_logging
+from ensembl_prodinf.utils import app_logging
 from ensembl_prodinf.handover_tasks import handover_database
 
 logger = logging.getLogger(__name__)
@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('handover_config')
 app.config.from_pyfile('handover_config.py')
-app.logger.addHandler(app_logging.file_handler(__name__))
-app.logger.addHandler(app_logging.default_handler())
+
+app_logging.add_app_handler(app.logger, __name__)
 
 swagger = Swagger(app)
 cors = CORS(app)

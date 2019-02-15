@@ -87,8 +87,6 @@ class HcSrvTest(unittest.TestCase):
         logging.info("Removing test sqlite database")
         Base.metadata.drop_all(hc_app.get_hive().engine)
 
-        # os.remove(dirpath + "/test_hc.db")
-
 
 if __name__ == '__main__':
     unittest.main()
