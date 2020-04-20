@@ -1,6 +1,6 @@
 git+git://github.com/Ensembl/ensembl-prodinf-core@experimental/handover#egg=ensembl_prodinf
 celery==4.1.0
-requests==2.18.4
+requests==2.20.0
 SQLAlchemy==1.1.11
 pika==0.11.2
 pika-pool==0.1.3
