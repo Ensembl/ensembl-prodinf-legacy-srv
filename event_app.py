@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, redirect, url_for
 from flask_cors import CORS
+import os 
 import re
 import json
 from flasgger import Swagger
-
+from flask_cors import CORS
+from elasticsearch import Elasticsearch, TransportError, NotFoundError
 from ensembl_prodinf import reporting
 from ensembl_prodinf.hive import HiveInstance
-from ensembl_prodinf.event_tasks import process_result
+from ensembl_prodinf.event_tasks import process_result, initiate_pipeline
 from ensembl_prodinf.exceptions import HTTPRequestError
 import event_config
 
@@ -22,14 +24,17 @@ def get_logger():
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('event_config')
+
 app.config['SWAGGER'] = {
     'title': 'Event App',
     'uiversion': 2
 }
 
 swagger = Swagger(app)
-
-print(app.config)
+cors = CORS(app)
+json_pattern = re.compile("application/json")
+es_host = app.config['ES_HOST']
+es_port = str(app.config['ES_PORT'])
 
 
 class EventNotFoundError(Exception):
@@ -370,6 +375,82 @@ def processes():
         description: Retrieve all the processes
     """
     return jsonify(list(process_lookup.keys()))
+
+
+
+#####QRP#######
+@app.route('/qrp/submit/job', methods=['POST'])
+def qrp_submit():
+    """ Submit and start producton pipelines based on the division, dbtype """
+    try:
+        if json_pattern.match(request.headers['Content-Type']):
+            job = request.json
+            spec = job.get('spec', None)
+            if spec and spec['handover_token']:#and events :
+                  res = initiate_pipeline(spec)
+                  if res['status']:
+                      return redirect(url_for('qrp'))
+                  raise ValueError(res['error'])
+            else:
+                raise ValueError('spec and result object not fount in payload' )
+        else:
+            raise ValueError('application content should be in json ')
+        
+    except Exception as e:
+        return Response(str(e) , status=400) 
+
+
+
+
+@app.route('/qrp/jobs', methods=['GET'])
+@app.route('/qrp/jobs/<string:handover_token>', methods=['GET'])
+def qrp(handover_token=None):
+    """
+    Get the status for all qrp jobs 
+    """
+    try:
+        es = Elasticsearch([{'host': es_host, 'port': es_port}])
+        if handover_token:
+            res = es.search(index="pipelines", body={
+                    "query": {
+                        "match": {
+
+                            "handover_token": handover_token
+                        }
+                     },
+                     "size": 1,
+                    })
+        else:
+            res = es.search(index="pipelines", body= {"size":300, "query": {"match_all": {}}})
+        jobs = []
+        for doc in res['hits']['hits']:
+            jobs.append(doc['_source'])
+
+    except Exception  as e:
+        return Response({'status': False, 'error': str(e)} , status=400)
+
+    return {'jobs': jobs}
+
+@app.route('/qrp/jobs', methods=['POST', 'PUT'])
+def qrp_insert():
+    """
+    Insert/Update record into ES
+    """
+    try:
+        es = Elasticsearch([{'host': es_host, 'port': es_port}])
+        if json_pattern.match(request.headers['Content-Type']):
+            #logger.debug("insert record " + str(request.json))
+            spec = request.json
+            if request.method == 'POST':
+                res = es.index(index='pipelines',doc_type='jobs', id=spec['handover_token'], body=spec)
+            if request.method == 'PUT':
+                res = es.update(index='pipelines',doc_type='jobs', id=spec['handover_token'], body={ "doc": spec })
+            return {'status': True}
+    except Exception as e :
+        return Response(str(e) , status=400)
+
+    return {'status': True, 'error': ''}
+
 
 
 @app.errorhandler(HTTPRequestError)
