@@ -1,0 +1,52 @@
+{% extends 'ensembl/base.html' %}
+
+{% block head %}
+{{ super() }}
+<link type="text/css"  rel="stylesheet" href="{{ url_for('static', filename='common/css/bootstrap-table.min.css') }}"/>
+{% endblock %}
+{% block content %}
+
+<div class="container" >
+<div class="row table-responsive">
+<div class="col-12">
+<table id="table"
+  class="table table-striped thead-dark table-bordered "
+  id="table"
+  data-toggle="table"
+  data-row-style="rowStyle"
+  data-search="true"
+  data-show-refresh="true"
+  data-show-toggle="true"
+  data-show-columns="true"
+  data-sortable="true"
+  data-sort-class="table-active"
+  data-pagination="true"
+  data-show-button-text="true"
+  data-page-size="25"
+  data-detail-view="true"
+  data-detail-view-by-click="false"
+  data-detail-view-icon="true"
+  data-detail-formatter="detailFormatter"
+  data-url="/qrp/jobs?format=json"
+  data-show-columns="true">
+  <thead>
+    <tr style="cursor: pointer">
+      <!--<th data-formatter="expandIcon"></th>-->
+      <th data-field="handover_token" data-sortable="true">ID</th>
+      <th data-field="current_job.PipelineName" data-sortable="true">Current Pipeline</th>
+      <th data-field="status" data-sortable="true" data-formatter="statusFormat">Status</th>
+      <th data-field="comment" data-sortable="true" >Tag</th>
+    </tr>
+  </thead>
+</table>
+</div>
+</div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ url_for('static', filename='common/js/bootstrap-table.min.js') }}"></script>
+ <script src="{{ url_for('static', filename='common/js/datacheck_jobs.js') }}"></script>
+{% endblock scripts %}
+

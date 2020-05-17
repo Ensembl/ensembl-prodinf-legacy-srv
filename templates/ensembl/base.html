@@ -20,6 +20,11 @@
       {{ bootstrap.load_css(version='4.3.0') }}
       <link rel="stylesheet" href="{{ url_for('static', filename='ensembl.css') }}">
       <link rel="shortcut icon" href="{{ url_for('static', filename=icon_image) }}">
+      <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" 
+        rel="stylesheet" 
+        integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" 
+        crossorigin="anonymous">
+
       {%- endblock styles %}
     {%- endblock head %}
   </head>

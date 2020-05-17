@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-from flask import Flask, request, jsonify, Response, redirect, url_for
+from flask import Flask, request, jsonify, Response, redirect, url_for, render_template
 from flask_cors import CORS
 import os 
 import re
 import json
 from flasgger import Swagger
+from flask_bootstrap import Bootstrap
 from flask_cors import CORS
 from elasticsearch import Elasticsearch, TransportError, NotFoundError
 from ensembl_prodinf import reporting
@@ -22,7 +23,7 @@ def get_logger():
     return reporting.get_logger(pool, event_config.report_exchange, 'event_handler', None, {})
 
 
-app = Flask(__name__, instance_relative_config=True)
+app = Flask(__name__, instance_relative_config=True, static_folder='static', template_folder='templates')
 app.config.from_object('event_config')
 
 app.config['SWAGGER'] = {
@@ -31,6 +32,7 @@ app.config['SWAGGER'] = {
 }
 
 swagger = Swagger(app)
+Bootstrap(app)
 cors = CORS(app)
 json_pattern = re.compile("application/json")
 es_host = app.config['ES_HOST']
@@ -409,6 +411,7 @@ def qrp(handover_token=None):
     Get the status for all qrp jobs 
     """
     try:
+        format = request.args.get('format', None)
         es = Elasticsearch([{'host': es_host, 'port': es_port}])
         if handover_token:
             res = es.search(index="pipelines", body={
@@ -425,11 +428,13 @@ def qrp(handover_token=None):
         jobs = []
         for doc in res['hits']['hits']:
             jobs.append(doc['_source'])
-
     except Exception  as e:
-        return Response({'status': False, 'error': str(e)} , status=400)
-
-    return {'jobs': jobs}
+        return Response(str(e) , status=400)
+    
+    if format and format == 'json':
+        return jsonify(jobs)
+    
+    return render_template('ensembl/qrp/list.html') #{'jobs': jobs}
 
 @app.route('/qrp/jobs', methods=['POST', 'PUT'])
 def qrp_insert():
