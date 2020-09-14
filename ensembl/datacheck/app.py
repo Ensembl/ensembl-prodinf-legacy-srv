@@ -262,6 +262,8 @@ def job_result(job_id):
         job['status'] = 'incomplete'
     elif job['output']['failed_total'] > 0:
         job['status'] = 'failed'
+    elif job['output']['passed_total'] + job['output']['skipped_total'] == 0:
+        job['status'] = 'failed'
 
     # if request.is_json:
     return jsonify(job)
@@ -295,7 +297,7 @@ def display_form():
     server_name_choices = [('', '')]
     for i, j in get_servers_dict().items():
         server_name_choices.append((i, j['server_name']))
-    form.server.server_name.choices = server_name_choices
+    form.server.server_name.choices = server_name_choices.sort(key = lambda x: x[1])
 
     return render_template(
         'ensembl/datacheck/submit.html',
