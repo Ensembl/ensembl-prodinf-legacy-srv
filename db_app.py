@@ -862,7 +862,7 @@ def handle_bad_request_error(e):
 
 @app.errorhandler(requests.HTTPError)
 def handle_client_error(e):
-    msg = str(e)
+    msg = 'HTTP request error: {}'.format(e)
     app.logger.error(msg)
     m = re.match(r'^(?P<status_code>\d+).+', msg)
     if m:

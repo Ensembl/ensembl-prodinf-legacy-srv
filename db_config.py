@@ -19,3 +19,9 @@ SERVER_URIS_FILE = os.environ.get("SERVER_URIS_FILE",
                                   file_config.get('server_uris_file', './server_uris.json'))
 
 BLACKLISTED_STATUS_HOSTS = file_config.get('blacklisted_status_hosts', [])
+
+DB_COPY_URI = os.environ.get("DB_COPY_URI",
+                             file_config.get('db_copy_uri'))
+
+DB_COPY_ADMIN = os.environ.get("DB_COPY_ADMIN",
+                               file_config.get('db_copy_admin'))
