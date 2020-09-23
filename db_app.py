@@ -654,7 +654,7 @@ def jobs(job_id):
 
 
 def job_to_result(job):
-    src_uri = 'mysql://user@{}/{}'.format(job['src_host'], job['src_incl_db'])
+    src_uri = 'mysql://user@{}/{}'.format(job['src_host'], job['src_incl_db'] or '')
     tgt_uri = 'mysql://user:pass@{}/{}'.format(job['tgt_host'], job['tgt_db_name'] or '')
     job_id = job.get('job_id', job.get('url', '').split('/')[-1])
     start_date = job['start_date']
