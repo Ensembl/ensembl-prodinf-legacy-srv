@@ -12,7 +12,6 @@ from flask_cors import CORS
 import requests
 
 import app_logging
-# from ensembl_prodinf.hive import HiveInstance
 from ensembl_prodinf.db_utils import list_databases, get_database_sizes
 from ensembl_prodinf.email_tasks import email_when_complete
 from ensembl_prodinf.server_utils import get_status, get_load
@@ -32,7 +31,6 @@ app.config['SWAGGER'] = {
 
 
 swagger = Swagger(app)
-# app.hive = HiveInstance(app.config["HIVE_URI"])
 app.logger.addHandler(app_logging.file_handler(__name__))
 app.logger.addHandler(app_logging.default_handler())
 
@@ -43,14 +41,6 @@ app.servers = load_config_json(app.config['SERVER_URIS_FILE'])
 app.db_copy_client = RestClient(app.config['DB_COPY_URI'])
 app.db_copy_client.jobs = '{}'
 app.db_copy_client.jobs_id = '{}/{}'
-
-
-#  def is_running(pid):
-#      try:
-#          os.kill(pid, 0)
-#      except OSError as err:
-#          return False
-#      return True
 
 
 cors = CORS(app)
@@ -767,27 +757,8 @@ def delete(job_id):
         examples:
           id: 1
     """
-    #  if 'kill' in request.args.keys() and request.args['kill'] == 1:
-    #      kill_job(job_id)
     app.db_copy_client.delete_job(job_id)
     return jsonify({"id": job_id}), 204
-
-
-#  def kill_job(job_id):
-#      job = app.hive.get_job_by_id(job_id)
-#      app.logger.debug('Getting worker_id for job_id %s', job_id)
-#      worker = app.hive.get_worker_id(job.role_id)
-#      app.logger.debug('Getting process_id for worker_id %s', worker.worker_id)
-#      process_id = app.hive.get_worker_process_id(worker.worker_id)
-#      app.logger.debug('Process_id is %s', process_id.process_id)
-#      os.kill(int(process_id.process_id), signal.SIGTERM)
-#      time.sleep(5)
-#      # Check if the process that we killed is alive.
-#      if is_running(int(process_id.process_id)):
-#          app.logger.error("Wasn't able to kill the process: %s", process_id.process_id)
-#          raise HTTPRequestError("Wasn't able to kill the process: %s" % process_id.process_id)
-#      else:
-#          return jsonify({"process_id": process_id.process_id})
 
 
 @app.route('/jobs', methods=['GET'])
