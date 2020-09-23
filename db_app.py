@@ -654,14 +654,19 @@ def jobs(job_id):
 
 
 def job_to_result(job):
-    src_uri = '{}/{}'.format(job['src_host'], job['src_incl_db'])
-    tgt_uri = '{}/{}'.format(job['tgt_host'], job['tgt_db_name'])
+    src_uri = 'mysql://user@{}/{}'.format(job['src_host'], job['src_incl_db'])
+    tgt_uri = 'mysql://user:pass@{}/{}'.format(job['tgt_host'], job['tgt_db_name'] or '')
+    job_id = job.get('job_id', job.get('url', '').split('/')[-1])
+    start_date = job['start_date']
+    timestamp = datetime.strptime(start_date, "%Y-%m-%dT%H:%M:%S").timestamp() if start_date else 'N/A'
+    end_date = job['end_date']
+    when_completed = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%S").strftime("%a, %d %b %Y %H:%M:%S GMT") if end_date else 'N/A'
     result = {
-        'id': job['job_id'],
+        'id': job_id,
         'input': {
             'source_db_uri': src_uri,
             'target_db_uri': tgt_uri,
-            'timestamp': datetime.strptime(job['start_date'], "%Y-%m-%dT%H:%M:%S").timestamp()
+            'timestamp': timestamp,
         },
         'output': {
             'runtime': 'N/A',
@@ -670,7 +675,7 @@ def job_to_result(job):
         },
         'progress': job.get('detailed_status'),
         'status': job['overall_status'].lower(),
-        'when_completed': job['end_date']
+        'when_completed': when_completed
     }
     return result
 
