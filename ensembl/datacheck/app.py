@@ -235,8 +235,8 @@ def job_submit(payload=None):
 
 @app.route('/datacheck/jobs', methods=['GET'])
 def job_list():
+    format = request.args.get('format', None)
     jobs = get_hive().get_all_results(app.analysis)
-
     # Handle case where submission is marked as complete,
     # but where output has not been created.
     for job in jobs:
@@ -246,36 +246,33 @@ def job_list():
             job['status'] = 'failed'
 
     # if request.is_json:
-    return jsonify(jobs)
-    # else:
-    # Need to pass some data to the template...
-    # return render_template('ensembl/datacheck/list.html')
+    if format=='json':
+        return jsonify(jobs)
 
-<<<<<<< HEAD
+    return render_template('ensembl/datacheck/list.html')
+
+@app.route('/datacheck/jobs/details', methods=['GET'])
+def job_details():
+
   jsonfile = request.args.get('jsonfile', None)
   file_data = open(jsonfile, 'r').read()
   return jsonify(json.loads(file_data))
-=======
->>>>>>> ffbd476d2376a46f558c739eefb0b8ed0df20320
 
 @app.route('/datacheck/jobs/<int:job_id>', methods=['GET'])
 def job_result(job_id):
     job = get_hive().get_result_for_job_id(job_id, progress=False)
-
+    format = request.args.get('format', None)
     # Handle case where submission is marked as complete,
     # but where output has not been created.
     if 'output' not in job.keys():
         job['status'] = 'incomplete'
     elif job['output']['failed_total'] > 0:
         job['status'] = 'failed'
-    elif job['output']['passed_total'] == 0:
-        job['status'] = 'failed'
 
-    # if request.is_json:
-    return jsonify(job)
-    # else:
-    # Need to pass some data to the template...
-    # return render_template('ensembl/datacheck/detail.html')
+    if format=='json':
+        return jsonify([job])
+
+    return render_template('ensembl/datacheck/detail_list.html', job_id=job_id)
 
 
 @app.route('/datacheck/download_datacheck_outputs/<int:job_id>')

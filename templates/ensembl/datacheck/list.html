@@ -1,5 +1,5 @@
+{% extends 'ensembl/datacheck/base.html' %}
 
-<<<<<<< HEAD
 {% block head %}
 {{ super() }}
 <link type="text/css"  rel="stylesheet" href="{{ url_for('static', filename='datachecks/css/bootstrap-table.min.css') }}"/>
@@ -55,8 +55,4 @@
   <script src="{{ url_for('static', filename='datachecks/js/bootstrap-table.min.js') }}"></script>
  <script src="{{ url_for('static', filename='datachecks/js/datacheck_jobs.js') }}"></script>
 {% endblock scripts %}
-=======
-{% extends 'ensembl/list.html' %}
->>>>>>> ffbd476d2376a46f558c739eefb0b8ed0df20320
 
-{% set title = 'Datacheck Job List' %}
