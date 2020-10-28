@@ -4,6 +4,7 @@ import logging
 import re
 
 from elasticsearch import Elasticsearch, TransportError, NotFoundError
+from sqlalchemy.exc import OperationalError
 from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -378,3 +379,9 @@ def handle_elastisearch_error(e):
 def handle_bad_request_error(e):
     app.logger.error(str(e))
     return jsonify(error=str(e)), e.status_code
+
+
+@app.errorhandler(OperationalError)
+def handle_sqlalchemy_error(e):
+    app.logger.error(str(e))
+    return jsonify(error=str(e)), 500

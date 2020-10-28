@@ -35,14 +35,6 @@ def get_hive():
     return hive
 
 
-def is_running(pid):
-    try:
-        os.kill(pid, 0)
-    except OSError as err:
-        return False
-    return True
-
-
 cors = CORS(app)
 
 # use re to support different charsets
@@ -127,7 +119,7 @@ def submit_job():
             type: string
             example: 'joe.bloggs@ebi.ac.uk'
     responses:
-      200:
+      201:
         description: submit of a metadata job
         schema:
           $ref: '#/definitions/submit'
@@ -141,7 +133,7 @@ def submit_job():
             job = get_hive().create_job(app.analysis, request.json)
         except ValueError as e:
             raise HTTPRequestError(str(e), 404)
-        results = {"job_id": job.job_id};
+        results = {"job_id": job.job_id}
         email = request.json.get('email')
         email_notification = request.json.get('email_notification')
         if email != None and email != '' and email_notification != None:
@@ -149,7 +141,7 @@ def submit_job():
             email_results = email_when_complete.delay(request.url_root + "jobs/" + str(job.job_id) + "?format=email",
                                                       email)
             results['email_task'] = email_results.id
-        return jsonify(results);
+        return jsonify(results), 201
     else:
         app.logger.error('Could not handle input of type %s', request.headers['Content-Type'])
         raise HTTPRequestError('Could not handle input of type %s' % request.headers['Content-Type'])

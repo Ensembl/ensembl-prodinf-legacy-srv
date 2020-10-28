@@ -270,11 +270,13 @@ def job_result(job_id):
         job['status'] = 'incomplete'
     elif job['output']['failed_total'] > 0:
         job['status'] = 'failed'
+    elif job['output']['passed_total'] == 0:
+        job['status'] = 'failed'
     
     if format=='json':
         return jsonify([job])
-
     return render_template('ensembl/datacheck/detail_list.html', job_id=job_id)   
+
 
 @app.route('/datacheck/download_datacheck_outputs/<int:job_id>')
 def download_dc_outputs(job_id):
@@ -295,13 +297,20 @@ def download_dc_outputs(job_id):
             for f_path in paths:
                 return send_file(str(f_path), as_attachment=True)
 
+
 @app.route('/datacheck/submit', methods=['GET'])
 def display_form():
     form = DatacheckSubmissionForm(request.form)
 
     server_name_choices = [('', '')]
+    server_name_dict = {}
+
     for i, j in get_servers_dict().items():
-        server_name_choices.append((i, j['server_name']))
+        server_name_dict[j['server_name']] = i
+
+    for name in sorted(server_name_dict):
+        server_name_choices.append((server_name_dict[name], name))
+
     form.server.server_name.choices = server_name_choices
 
     return render_template(
