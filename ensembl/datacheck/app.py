@@ -256,11 +256,8 @@ def job_list():
 @app.route('/datacheck/jobs/details', methods=['GET'])
 def job_details():
 
-  output_dir = request.args.get('output_dir', None)
-  db_name    = request.args.get('db_name', None)
-
-  #code to get datcheckoutput created from pipeline will be added 
-  file_data = open('/home/ensprod/vinay/web_datacheck/test/by_species.json', 'r').read()
+  jsonfile = request.args.get('jsonfile', None)
+  file_data = open(jsonfile, 'r').read()
   return jsonify(json.loads(file_data))
 
 @app.route('/datacheck/jobs/<int:job_id>', methods=['GET'])

@@ -3,7 +3,6 @@ function expandIcon(value, row , index){
 }
 
 function row_details(id){
- console.log(id);
  let table = $('#table');
  console.log(table);
  table.bootstrapTable('expandRow', id);
@@ -13,11 +12,11 @@ function downloadFormat(value, row){
 
   let cursor_download = 'not-allowed';
   let download_event = 'pointer-events:none';
-  if(row.status == 'complete'){
+  if(row.status == 'complete' || row.status == 'failed'){
     cursor_download = 'pointer';
     download_event = ''; 
   }
-  return '<a title="Dowload DC.. " style="cursor:'+ cursor_download +'; '+ download_event +'"  href="http://ensprod-dev-01.ebi.ac.uk/api/thomas/dc/download_datacheck_outputs/'+ row.id  +' ">'+ row.id +'</a>'
+  return '<a title="Dowload DC.. " style="cursor:'+ cursor_download +'; '+ download_event +'"  href="/datacheck/download_datacheck_outputs/'+ row.id  +' ">'+ row.id +'</a>'
 }
 
 
@@ -38,8 +37,45 @@ function statusFormat(value, row){
      return '<span class="badge ' + class_name +'">'+ value +'</span>'
 }
 
+function FormatArrayName(value, row){
+  let html = ''; 
+  if( value ){
+    for(let i=0; i<value.length; i++){
+        html = html + value[i] + ' ';
+    }
+    return html;
+  }else{
+    return 'NA';
+  }
+
+}
+
+function FormatTimestamp(value){
+
+  if(value){
+   return value.timestamp;
+  }
+  else{ return '-';}
+}
+
+
+
+
 function parseJobs(row, type){
       let html = [];
+      html.push('<div class="m-2" id="accordionIO">');    
+      //heading 
+     html.push('<div class="card-header" id="' + row.id + type + '">' +  
+                '<h2 class="mb-0">'                     +
+                '<button class="btn btn-outline-info btn-link" type="button" data-toggle="collapse" data-target="#collapseOne'+ row.id + type + '" aria-expanded="true" aria-controls="collapseOne">' +
+                type +
+                '</button>' +
+                '</h2>' +
+                '</div>');        
+
+
+
+      html.push('<div id="collapseOne' + row.id + type +'" class="collapse " aria-labelledby="' + row.id + type + '" data-parent="#accordionIO">');
       html.push('<div class="card mb-2">')
       html.push('<div class="card-body">')
       html.push('<h5 class="card-title">'+type +' :</h5>')
@@ -55,27 +91,40 @@ function parseJobs(row, type){
      html.push('</table>')
      html.push('</div>')
      html.push('</div>')  
+ 
+     html.push('</div>')  
+ 
+    html.push('</div>') //IO  
+
      return html.join('')
 }
 
 function parseDatabases(row){
       let html = [];
       let database_count = 0;
+      html.push('<div class="m-2" id="accordionDB">');   
+      html.push('<div class="card-header" id="DB' + row.id  + '">' +
+                '<h2 class="mb-0">'                     +
+                '<button class="btn btn-outline-info btn-link" type="button" data-toggle="collapse" data-target="#collapseOneDB'+ row.id + '" aria-expanded="true" aria-controls="collapseOne"> Database:' +
+                '</button>' +
+                '</h2>' +
+                '</div>');
+
+      html.push('<div id="collapseOneDB' + row.id +'" class="collapse " aria-labelledby="DB' + row.id  + '" data-parent="#accordionDB">');    
       html.push('<div class="card ">')
       html.push('<div class="card-body">')
-      html.push('<h5 class="card-title">DataBases  :</h5>')
+      html.push('<h5 class="card-title">DataBase  :</h5>')
       html.push('<div id="accordion">')
       html.push('<hr>')
       $.each(row.output.databases, function (key, value) {
          database_count++;
          let db_name = key;
-         console.log(db_name);
          html.push('<div class="card m-2"> <div class="card-header" id="'+ key + 'headingOne"><h5 class="mb-2">')
          html.push('<button class="btn btn-link">')
          html.push(key + '</button><button class="btn btn-primary pull-right" style="right: 0"'
          + ' data-toggle="collapse" data-target="#' + key + '" aria-expanded="true" aria-controls="collapseOne"' 
          + ' Onclick="getdetails('+ row.id 
-         +  ", '" + row.output.output_dir 
+         +  ", '" + row.output.json_output_file 
          + "' , '" + db_name + "'"
          +')">Details</button></h5></div>')
          html.push('<div id="'+ key +'" class="collapse m-2" aria-labelledby="'+ key + 'headingOne" data-parent="#accordion">')
@@ -98,6 +147,10 @@ function parseDatabases(row){
       html.push('</div>')
       html.push('</div>')
       html.push('</div>')
+ 
+      html.push('</div>') //colloaspe db
+
+      html.push('</div>') //accordion DB
      if (database_count == 0){
        return ''; 
      }
@@ -118,13 +171,13 @@ function detailFormatter(index, row) {
 }
 
 
-function getdetails(id, database_name, db_name){
-    console.log(id, database_name, db_name);
+function getdetails(id, json_path, db_name){
+
     document.getElementById(db_name+'_details').innerHTML = '<div class="d-flex justify-content-center"> <div class="spinner-border" role="status"> <span class="sr-only">Loading...</span> </div> </div></div>';
     //send proper url  
-    $.getJSON('http://ensprod-dev-01:7012/datacheck/jobs/details', function(result){
+    $.getJSON('/datacheck/jobs/details?jsonfile=' + json_path, function(result){
         console.log(result);
-        let details = parse_details(database_name, result);
+        let details = parse_details(db_name, result);
         document.getElementById(db_name+'_details').innerHTML = details;
     });
 }
@@ -205,14 +258,14 @@ $(document).ready(function(){
         theadClasses: 'bg-purple'
   });
 
-  $table.bootstrapTable('expandAllRows')
+  $table.bootstrapTable('expandAllRows');
   $(".search").removeClass("float-right");
   $(".search").addClass("float-left");
-  $(".search").prepend('<input type="number" min=0  id="myjob_id" class="form-control search-input" placeholder="job id"><button class="btn btn-primary job_btn mr-3">View</button>');
+  //$(".search").prepend('<input type="number" min=0  id="myjob_id" class="form-control search-input" placeholder="job id"><button class="btn btn-primary job_btn mr-3">View</button>');
   // get the job details
-  $(".job_btn").click(function(){
+  /*$(".job_btn").click(function(){
        let job_id = $("#myjob_id").val();
              //this will redirect us in same window
              document.location.href = "/datacheck/jobs/" + job_id
-  });
+  });*/
 });
