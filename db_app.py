@@ -45,7 +45,7 @@ def is_running(pid):
     return True
 
 
-cors = CORS(app)
+CORS(app)
 
 # use re to support different charsets
 json_pattern = re.compile("application/json")
