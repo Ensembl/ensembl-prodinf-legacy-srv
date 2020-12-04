@@ -107,6 +107,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/keywords"
 
+  /datacheck/submit:
+    post:
+      tags:
+        - Submit datachecks
+      summary: "Pass datacheck parameters to pipeline for execution"
+      responses:
+        200:
+          description: Details of submitted job
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/job"
+
+  /datacheck/jobs:
+    get:
+      tags:
+        - Retrieve datacheck job information
+      summary: "Return all datacheck jobs"
+      responses:
+        200:
+          description: All datacheck jobs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/jobs"
+
+  /datacheck/jobs/{job_id}:
+    get:
+      tags:
+        - Retrieve datacheck job information
+      summary: "Return a specified datacheck job"
+      parameters:
+        - $ref: "#/components/parameters/job_id"
+      responses:
+        200:
+          description: Details of all datachecks in the specified group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/job"
+
 components:
   parameters:
     name:
@@ -144,6 +185,15 @@ components:
       schema:
         type: string
         example: xref
+
+    job_id:
+      name: job_id
+      in: path
+      description: A datacheck pipeline job ID
+      required: true
+      schema:
+        type: int
+        example: 10
 
   schemas:
     datacheck:
@@ -214,3 +264,30 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/datacheck"
+
+    job:
+      title: job
+      type: object
+      properties:
+        id:
+          type: int
+          description: Unique job identifier, from pipeline database
+        input:
+          type: hash
+          description: Parameters used to submit datacheck job to pipeline
+        output:
+          type: hash
+          description: Output parameters from datacheck pipeline
+        status:
+          type: string
+          enum: ["failed", "incomplete", "passed"]
+          description: Result of datacheck job execution
+
+    jobs:
+      title: jobs
+      type: object
+      properties:
+        job:
+          type: array
+          items:
+            $ref: "#/components/schemas/job"

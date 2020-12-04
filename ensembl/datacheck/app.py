@@ -1,18 +1,18 @@
 import os
 import re
-import time
+from io import BytesIO
+from pathlib import Path
+from zipfile import ZipFile
+
+from flasgger import Swagger
 from flask import Flask, json, jsonify, redirect, render_template, request, send_file
 from flask_bootstrap import Bootstrap
 from flask_cors import CORS
-from flasgger import Swagger
-from io import BytesIO
-from zipfile import ZipFile
-from pathlib import Path
 
 from ensembl.datacheck.config import DatacheckConfig
+from ensembl.db_utils import get_databases_list, get_db_type
 from ensembl.forms import DatacheckSubmissionForm
 from ensembl.hive import HiveInstance
-from ensembl.db_utils import get_databases_list, get_db_type
 from ensembl.server_utils import assert_mysql_uri, assert_mysql_db_uri
 
 # Go up two levels to get to root, where we will find the static and template files
@@ -235,27 +235,41 @@ def job_submit(payload=None):
 
 @app.route('/datacheck/jobs', methods=['GET'])
 def job_list():
-    jobs = get_hive().get_all_results(app.analysis)
+     
+    fmt = request.args.get('format', None)
+    job_id = request.args.get('job_id', None)
+    
+    if request.is_json or fmt == 'json':
+        if job_id:
+            jobs = [ get_hive().get_result_for_job_id(job_id, progress=False) ]
+        else:
+            jobs = get_hive().get_all_results(app.analysis)
+ 
+        # Handle case where submission is marked as complete,
+        # but where output has not been created.
+        for job in jobs:
+            if 'output' not in job.keys():
+                job['status'] = 'incomplete'
+            elif job['output']['failed_total'] > 0:
+                job['status'] = 'failed'
 
-    # Handle case where submission is marked as complete,
-    # but where output has not been created.
-    for job in jobs:
-        if 'output' not in job.keys():
-            job['status'] = 'incomplete'
-        elif job['output']['failed_total'] > 0:
-            job['status'] = 'failed'
+        return jsonify(jobs)
 
-    # if request.is_json:
-    return jsonify(jobs)
-    # else:
-    # Need to pass some data to the template...
-    # return render_template('ensembl/datacheck/list.html')
+    return render_template('ensembl/datacheck/list.html', job_id=job_id)
 
+
+@app.route('/datacheck/jobs/details', methods=['GET'])
+def job_details():
+    try:
+        jsonfile = request.args.get('jsonfile', None)
+        file_data = open(jsonfile, 'r').read()
+        return jsonify(json.loads(file_data))
+    except Exception:
+        return jsonify({'Could not retrieve results'})
 
 @app.route('/datacheck/jobs/<int:job_id>', methods=['GET'])
 def job_result(job_id):
     job = get_hive().get_result_for_job_id(job_id, progress=False)
-
     # Handle case where submission is marked as complete,
     # but where output has not been created.
     if 'output' not in job.keys():
@@ -263,14 +277,12 @@ def job_result(job_id):
     elif job['output']['failed_total'] > 0:
         job['status'] = 'failed'
     elif job['output']['passed_total'] == 0:
-        job['status'] = 'failed'
+        job['status'] = 'dc-run-error'
 
-    # if request.is_json:
     return jsonify(job)
     # else:
-    # Need to pass some data to the template...
+    # Need to pass some data to th  e template...
     # return render_template('ensembl/datacheck/detail.html')
-
 
 @app.route('/datacheck/download_datacheck_outputs/<int:job_id>')
 def download_dc_outputs(job_id):
@@ -284,27 +296,20 @@ def download_dc_outputs(job_id):
                 for f_path in paths:
                     z.write(str(f_path), f_path.name)
             data.seek(0)
-            filename = 'Datacheck_output_job_%s.zip' % job_id
+            filename = 'dc_job_%s.zip' % job_id
             return send_file(data, mimetype='application/zip',
                              attachment_filename=filename, as_attachment=True)
         else:
             for f_path in paths:
                 return send_file(str(f_path), as_attachment=True)
 
-
 @app.route('/datacheck/submit', methods=['GET'])
 def display_form():
     form = DatacheckSubmissionForm(request.form)
 
     server_name_choices = [('', '')]
-    server_name_dict = {}
-
     for i, j in get_servers_dict().items():
-        server_name_dict[j['server_name']] = i
-
-    for name in sorted(server_name_dict):
-        server_name_choices.append((server_name_dict[name], name))
-
+        server_name_choices.append((i, j['server_name']))
     form.server.server_name.choices = server_name_choices
 
     return render_template(
