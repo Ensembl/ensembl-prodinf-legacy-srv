@@ -105,9 +105,13 @@ def handovers():
         spec = request.json
         if 'src_uri' not in spec or 'contact' not in spec or 'comment' not in spec:
             raise HTTPRequestError("Handover specification incomplete - please specify src_uri, contact and comment")
-        ticket = handover_database(spec)
-        app.logger.info('Ticket: %s', ticket)
-        return jsonify(ticket);
+        try:
+            ticket = handover_database(spec)
+            app.logger.info('Ticket: %s', ticket)
+            return jsonify(ticket)
+        except ValueError as e:
+            raise HTTPRequestError("Ho! Something went wrong:\n%s" % e)
+
     else:
         raise HTTPRequestError('Could not handle input of type %s' % request.headers['Content-Type'])
 
