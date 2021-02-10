@@ -540,7 +540,7 @@ def submit():
             email_results = email_when_complete.delay(request.url_root + "jobs/" + str(job.job_id) + "?format=email",
                                                       email)
             results['email_task'] = email_results.id
-        return jsonify(results);
+        return jsonify(results), 201
     else:
         app.logger.error('Could not handle input of type %s', request.headers['Content-Type'])
         raise HTTPRequestError('Could not handle input of type %s' % request.headers['Content-Type'])
