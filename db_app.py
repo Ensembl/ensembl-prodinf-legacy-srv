@@ -625,7 +625,7 @@ def jobs(job_id):
             job_results = app.hive.get_result_for_job_id(job_id, progress=False)
             job = app.hive.get_job_by_id(job_id)
             last_job_progress = app.hive.get_last_job_progress(job)
-            if last_job_progress != None:
+            if last_job_progress is not None:
                 job_progress = json.loads(last_job_progress.message)
                 # "detailed_status": {
                 #   "status_msg": "Complete",
