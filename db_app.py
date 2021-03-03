@@ -1,21 +1,21 @@
-import logging
+import json
 import os
 import re
-
 import signal
+
 import time
 from flasgger import Swagger
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from sqlalchemy.orm import sessionmaker
 
 import app_logging
-from ensembl_prodinf.hive import HiveInstance
+from ensembl_prodinf.config import load_config_json
 from ensembl_prodinf.db_utils import list_databases, get_database_sizes
 from ensembl_prodinf.email_tasks import email_when_complete
-from ensembl_prodinf.server_utils import get_status, get_load
 from ensembl_prodinf.exceptions import HTTPRequestError
-from ensembl_prodinf.config import load_config_json
-
+from ensembl_prodinf.hive import HiveInstance, JobProgress
+from ensembl_prodinf.server_utils import get_status, get_load
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object('db_config')
@@ -25,7 +25,6 @@ app.config['SWAGGER'] = {
     'title': 'Database copy REST endpoints',
     'uiversion': 2
 }
-
 
 swagger = Swagger(app)
 app.hive = HiveInstance(app.config["HIVE_URI"])
@@ -546,6 +545,8 @@ def submit():
         raise HTTPRequestError('Could not handle input of type %s' % request.headers['Content-Type'])
 
 
+
+
 @app.route('/jobs/<int:job_id>', methods=['GET'])
 def jobs(job_id):
     """
@@ -619,8 +620,27 @@ def jobs(job_id):
         return failure(job_id)
     elif fmt is None:
         app.logger.info('Retrieving job with ID %s', job_id)
+
         try:
-            job_results = app.hive.get_result_for_job_id(job_id)
+            job_results = app.hive.get_result_for_job_id(job_id, progress=False)
+            job = app.hive.get_job_by_id(job_id)
+            last_job_progress = app.hive.get_last_job_progress(job)
+            if last_job_progress is not None:
+                job_progress = json.loads(last_job_progress.message)
+                # "detailed_status": {
+                #   "status_msg": "Complete",
+                #   "progress": 100.0,
+                #   "total_tables": 77,
+                #   "table_copied": 77
+                # }
+                message = "%s - Progress: %s%%  - Runtime: %s" % (job_progress['status_msg'],
+                                                                  job_progress['progress'],
+                                                                  job_progress['runtime'])
+                job_results['progress'] = {"complete": job_progress['table_copied'],
+                                           "total": job_progress['total_tables'],
+                                           "message": message}
+            else:
+                job_results['progress'] = {"complete": "n/a", "total": "n/a", "message": "Not Available for now"}
         except ValueError as e:
             raise HTTPRequestError(str(e), 404)
         return jsonify(job_results)
@@ -644,14 +664,14 @@ def job_email(email, job_id):
         results = app.hive.get_result_for_job_id(job_id)
         if results['status'] == 'complete':
             results['subject'] = 'Copy database from %s to %s successful' % (
-            results['output']['source_db_uri'], results['output']['target_db_uri'])
+                results['output']['source_db_uri'], results['output']['target_db_uri'])
             results['body'] = 'Copy from %s to %s is successful\n' % (
-            results['output']['source_db_uri'], results['output']['target_db_uri'])
+                results['output']['source_db_uri'], results['output']['target_db_uri'])
             results['body'] += 'Copy took %s' % (results['output']['runtime'])
         elif results['status'] == 'failed':
             failure = app.hive.get_job_failure_msg_by_id(job_id)
             results['subject'] = 'Copy database from %s to %s failed' % (
-            results['input']['source_db_uri'], results['input']['target_db_uri'])
+                results['input']['source_db_uri'], results['input']['target_db_uri'])
             results['body'] = 'Copy failed with following message:\n'
             results['body'] += '%s\n\n' % (failure.msg)
             results['body'] += 'Please see URL for more details: %s%s \n' % (results['input']['result_url'], job_id)
