@@ -1,4 +1,4 @@
-git+git://github.com/Ensembl/ensembl-prodinf-core@stable#egg=ensembl_prodinf
+git+git://github.com/Ensembl/ensembl-prodinf-legacy-core@stable#egg=ensembl_prodinf
 amqp==2.6.0
 appdirs==1.4.0
 attrs==19.3.0
